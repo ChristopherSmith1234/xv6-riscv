@@ -4,6 +4,8 @@
 
 int calculate_command_size(int argc, char* argv[]);
 int calculate_char_array_size_no_null(char* array_address);
+void assemble_command(int argc, char* argv[], char* command);
+void write_characters(char command[], int write_index, char* argument);
 
 int main(int argc, char* argv[]) {
     if (argc == 1) {
@@ -12,9 +14,50 @@ int main(int argc, char* argv[]) {
         int command_size = calculate_command_size(argc, argv);
 
         printf("Size of command: %u\n", command_size);
+        char command[command_size];
+
+        assemble_command(argc, argv, command);
+
+        printf("Command is: %s\n", command);
     }
 
     exit(0);
+}
+
+void assemble_command(int argc, char* argv[], char* command) {
+    if (argc > 1) {
+        int write_index = 0;
+
+        int argument_index = 1;
+        int argument_count = argc;
+
+        while (argument_index < argument_count) {
+            char* argument = argv[argument_index];
+            int argument_size_no_null = calculate_char_array_size_no_null(argument);
+
+            if (argument_index != 1) {
+                command[write_index] = ' ';
+                ++write_index;
+            }
+
+            write_characters(command, write_index, argument);
+
+            write_index += argument_size_no_null;
+
+            ++argument_index;
+        }
+
+        command[write_index] = '\0';
+    }
+}
+
+void write_characters(char command[], int write_index, char* argument) {
+    while ((int)*argument != 0) {
+        command[write_index] = *argument;
+
+        ++write_index;
+        ++argument;
+    }
 }
 
 int calculate_command_size(int argc, char* argv[]) {
@@ -25,7 +68,6 @@ int calculate_command_size(int argc, char* argv[]) {
         int argument_count = argc;
 
         int null_character_size = sizeof(char);        
-        printf("char size: %u\n", null_character_size);
         int space_size = 0;
 
         while (argument_index < argument_count) {
