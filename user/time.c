@@ -2,100 +2,69 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
-int calculate_command_size(int argc, char* argv[]);
-int calculate_char_array_size_no_null(char* array_address);
-void assemble_command(int argc, char* argv[], char* command);
-void write_characters(char command[], int write_index, char* argument);
+//  Exit codes:
+//  0: Success
+//  1: Usage error
+//  2: Child process creation error
+//  3: Command execution error
+//  4: Child process return error
+
+const int TICKS_PER_SECOND = 100;
 
 int main(int argc, char* argv[]) {
     if (argc == 1) {
         printf("Usage: time [command]\n");
+
+        return 1;
     } else {
-        int command_size = calculate_command_size(argc, argv);
+        int start_time = uptime();
+        int process_id = fork();
 
-        printf("Size of command: %u\n", command_size);
-        char command[command_size];
+        if (process_id < 0) {
+            printf("Failed to create child process. Exiting...\n");
+            
+            return 2;
+        } else if (process_id == 0) {
+            //  *************
+            //  Child process
+            //  *************
 
-        assemble_command(argc, argv, command);
+            int argument_count = argc - 1;
 
-        printf("Command is: %s\n", command);
-    }
+            char* arguments[argument_count];
+            int argument_index = 0;
 
-    exit(0);
-}
+            while (argument_index < argument_count) {
+                //  argv[0] is program name, so begin at argv[1]
+                arguments[argument_index] = argv[argument_index + 1];
 
-void assemble_command(int argc, char* argv[], char* command) {
-    if (argc > 1) {
-        int write_index = 0;
-
-        int argument_index = 1;
-        int argument_count = argc;
-
-        while (argument_index < argument_count) {
-            char* argument = argv[argument_index];
-            int argument_size_no_null = calculate_char_array_size_no_null(argument);
-
-            if (argument_index != 1) {
-                command[write_index] = ' ';
-                ++write_index;
+                ++argument_index;
             }
+            
+            int command_exit_status = exec(arguments[0], arguments);
 
-            write_characters(command, write_index, argument);
+            if (command_exit_status != 0) {
+                printf("Could not execute command. Exiting...\n");
 
-            write_index += argument_size_no_null;
-
-            ++argument_index;
+                return 3;
+            }
         }
 
-        command[write_index] = '\0';
-    }
-}
+        int child_process_return_status = 0;
+        wait(&child_process_return_status);
 
-void write_characters(char command[], int write_index, char* argument) {
-    while ((int)*argument != 0) {
-        command[write_index] = *argument;
+        if (child_process_return_status != 0) {
+            printf("Error occured while returning from process. Exiting...\n");
 
-        ++write_index;
-        ++argument;
-    }
-}
-
-int calculate_command_size(int argc, char* argv[]) {
-    int command_size = 0;
-
-    if (argc > 1) {
-        int argument_index = 1;
-        int argument_count = argc;
-
-        int null_character_size = sizeof(char);        
-        int space_size = 0;
-
-        while (argument_index < argument_count) {
-            char* argument_address = argv[argument_index];
-            int argument_size_no_null 
-                = calculate_char_array_size_no_null(argument_address);            
-            int argument_size = argument_size_no_null + space_size;
-
-            command_size += argument_size;
-
-            space_size = null_character_size;
-
-            ++argument_index;
+            return 4;
         }
 
-        command_size += null_character_size;
+        int end_time = uptime();
+        int ticks_elapsed = end_time - start_time;
+        int execution_time = ticks_elapsed * TICKS_PER_SECOND;
+
+        printf("Real-time: %u\n", execution_time);
     }
 
-    return command_size;
-}
-
-int calculate_char_array_size_no_null(char* array_address) {
-    int char_array_size = 0;
-
-    while ((int)*array_address != 0) {
-        ++char_array_size;
-        ++array_address;
-    }
-
-    return char_array_size;
+    return 0;
 }
