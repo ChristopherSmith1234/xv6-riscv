@@ -693,3 +693,54 @@ procdump(void)
     printf("\n");
   }
 }
+
+int showProcs(void) {
+
+
+  printf("name\tpid\tstate\t\tmemory\tParID\tParName\tOpen Files\t\n");
+
+  struct proc *p;
+  
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+
+    if (p->state > 1 && p->state < 5) {
+      char* process_state = "RUNNING\t\0";
+
+      if (p->state == 2) {
+        process_state = "SLEEPING\0";
+      } else if (p->state == 3) {
+        process_state = "RUNNABLE\0";
+      }
+
+      char* process_name = p->name;
+      int process_id = p->pid;
+      uint64 process_size = p->sz;
+
+      int parent_id = 0;
+      char* parent_name = "-\0";
+
+      if (p->parent) {
+        parent_id = p->parent->pid;
+        parent_name = p->parent->name;
+      }
+      
+      printf("%s\t%u\t%s\t%lu\t%u\t%s\t", 
+        process_name, process_id, process_state, process_size, parent_id, parent_name);
+
+      printf("[");
+
+      for (int i = 0; i < NOFILE; i++) {
+        if (p->ofile[i]) {
+          printf(" FD%d ", i);
+        }
+      }
+
+      printf("]\n");
+    }
+
+    release(&p->lock);
+  }
+
+  return 0;
+}
