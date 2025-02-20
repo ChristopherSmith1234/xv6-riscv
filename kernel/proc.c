@@ -695,8 +695,6 @@ procdump(void)
 }
 
 int showProcs(void) {
-
-
   printf("name\tpid\tstate\t\tmemory\tParID\tParName\tOpen Files\t\n");
 
   struct proc *p;
