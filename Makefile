@@ -142,6 +142,7 @@ UPROGS=\
 	$U/_hello\
 	$U/_time\
 	$U/_ps\
+	$U/_twip\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
