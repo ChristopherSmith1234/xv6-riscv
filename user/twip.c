@@ -46,9 +46,30 @@ int main() {
     }
 
     printf(
-        "To determine whether a number between %u and %u is prime,"\
+        "To determine whether a number between %u and %u is prime, "\
         "up to %u prime numbers must be checked\n",
         PRIME_FLOOR, LIMIT, primeList.size);
+    printf("Beginning twin prime count...\n");
+
+    u32 previousPrime = PRIME_FLOOR;
+    current = previousPrime + 1;
+    u32 twinPrimeCount = 0;
+
+    while (current < LIMIT) {
+        if (isPrime(current, primeList)) {
+            if (current - previousPrime <= 2) {
+                twinPrimeCount += 1;
+            }
+
+            previousPrime = current;
+        }
+
+        ++current;
+    }
+    
+    printf(
+        "There are %u twin primes between %u and %u\n", 
+        twinPrimeCount, PRIME_FLOOR, LIMIT);
 
     exit(0);
 }
@@ -59,6 +80,10 @@ u8 isPrime(u32 check, struct PrimeList primeList) {
     while (index < primeList.size) {
         u32 currentPrime = primeList.primes[index];
 
+        if (check == currentPrime) {
+            return TRUE;
+        }
+
         if (check % currentPrime == 0) {
             return FALSE;
         }
@@ -66,7 +91,6 @@ u8 isPrime(u32 check, struct PrimeList primeList) {
         ++index;
     }
 
-    printf("Found no divisors, %u is prime\n", check);
     return TRUE;
 }
 
