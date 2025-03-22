@@ -15,6 +15,8 @@ struct proc *initproc;
 int nextpid = 1;
 struct spinlock pid_lock;
 
+int mode = 0;
+
 extern void forkret(void);
 static void freeproc(struct proc *p);
 
@@ -283,6 +285,7 @@ fork(void)
   struct proc *np;
   struct proc *p = myproc();
 
+
   // Allocate process.
   if((np = allocproc()) == 0){
     return -1;
@@ -295,6 +298,9 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
+
+  np->hpRunLength = 0;
+  np->mpRunLength = 0;
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
@@ -741,4 +747,26 @@ int showProcs(void) {
   }
 
   return 0;
+}
+
+int updateScheduler(void) {
+  struct proc *p = myproc();
+
+  acquire(&p->lock);
+
+  if (p->hpRunLength == 0 && p->mpRunLength == 0) {
+    p->hpRunLength = 8;
+    p->mpRunLength = 4;
+  } else {
+    p->hpRunLength = 0;
+    p->mpRunLength = 0;
+  }
+
+  release(&p->lock);
+
+  return 0;
+}
+
+void sys_debug(int enable) {
+  mode = enable;
 }

@@ -23,6 +23,8 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 int showProcs(void);
+int updateScheduler(void);
+void sys_debug(int);
 
 // ulib.c
 int stat(const char*, struct stat*);

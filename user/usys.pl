@@ -37,3 +37,5 @@ entry("sbrk");
 entry("sleep");
 entry("uptime");
 entry("showProcs");
+entry("updateScheduler");
+entry("sys_debug");

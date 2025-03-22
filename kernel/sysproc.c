@@ -96,3 +96,11 @@ uint64
 sys_ps(void) {
   return showProcs();
 }
+
+uint64 sys_usched() {
+  return updateScheduler();
+}
+
+void sys_sys_debug(uint64 enable) {
+  sys_debug(enable);
+}
