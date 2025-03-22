@@ -454,36 +454,84 @@ scheduler(void)
   struct cpu *c = mycpu();
 
   c->proc = 0;
-  for(;;){
-    // The most recent process to run may have had interrupts
-    // turned off; enable them to avoid a deadlock if all
-    // processes are waiting.
+
+  for (;;) {
     intr_on();
 
     int found = 0;
-    for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
-        found = 1;
+    for (p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+
+      if (p->state == RUNNABLE) {
+        if (p->hpRunLength > 0) {
+          p->state = RUNNING;
+          c->proc = p;
+          swtch(&c->context, &p->context);
+
+          c->proc = 0;
+          found = 1;
+        } else if (p->mpRunLength > 0) {
+          p->state = RUNNING;
+          c->proc = p;
+          swtch(&c->context, &p->context);
+
+          c->proc = 0;
+          found = 1;
+        } else {
+          p->state = RUNNING;
+          c->proc = p;
+          swtch(&c->context, &p->context);
+
+          c->proc = 0;
+          found = 1;
+        }
       }
+
       release(&p->lock);
     }
-    if(found == 0) {
-      // nothing to run; stop running on this core until an interrupt.
+
+
+    if (found == 0) {
       intr_on();
       asm volatile("wfi");
     }
   }
+
+  //struct proc *p;
+  //struct cpu *c = mycpu();
+
+  //c->proc = 0;
+  //for(;;){
+  //  // The most recent process to run may have had interrupts
+  //  // turned off; enable them to avoid a deadlock if all
+  //  // processes are waiting.
+  //  intr_on();
+
+  //  int found = 0;
+  //  for(p = proc; p < &proc[NPROC]; p++) {
+  //    acquire(&p->lock);
+  //    if(p->state == RUNNABLE) {
+  //      // Switch to chosen process.  It is the process's job
+  //      // to release its lock and then reacquire it
+  //      // before jumping back to us.
+  //      p->state = RUNNING;
+  //      c->proc = p;
+  //      swtch(&c->context, &p->context);
+
+  //      // Process is done running for now.
+  //      // It should have changed its p->state before coming back.
+  //      c->proc = 0;
+  //      found = 1;
+  //    }
+  //    release(&p->lock);
+  //  }
+  //  if(found == 0) {
+  //    // nothing to run; stop running on this core until an interrupt.
+  //    intr_on();
+  //    asm volatile("wfi");
+  //  }
+  //}
 }
 
 // Switch to scheduler.  Must hold only p->lock
@@ -750,19 +798,21 @@ int showProcs(void) {
 }
 
 int updateScheduler(void) {
-  struct proc *p = myproc();
+  struct proc *p;
 
-  acquire(&p->lock);
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
 
-  if (p->hpRunLength == 0 && p->mpRunLength == 0) {
-    p->hpRunLength = 8;
-    p->mpRunLength = 4;
-  } else {
-    p->hpRunLength = 0;
-    p->mpRunLength = 0;
+    if (p->hpRunLength == 0 && p->mpRunLength == 0) {
+      p->hpRunLength = 8;
+      p->mpRunLength = 4;
+    } else {
+      p->hpRunLength = 0;
+      p->mpRunLength = 0;
+    }
+
+    release(&p->lock);
   }
-
-  release(&p->lock);
 
   return 0;
 }
