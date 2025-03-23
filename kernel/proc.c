@@ -467,6 +467,7 @@ scheduler(void)
         if (p->hpRunLength > 0) {
           p->state = RUNNING;
           c->proc = p;
+          p->hpRunLength -= 1;
           swtch(&c->context, &p->context);
 
           c->proc = 0;
@@ -474,6 +475,7 @@ scheduler(void)
         } else if (p->mpRunLength > 0) {
           p->state = RUNNING;
           c->proc = p;
+          p->mpRunLength -= 1;
           swtch(&c->context, &p->context);
 
           c->proc = 0;
