@@ -37,15 +37,18 @@ u8 isPrime(u32 check, struct PrimeList primeList);
 //  @param  primeList List to modify
 void appendPrime(u32 newPrime, struct PrimeList* primeList);
 
-void countTwinPrimes();
+int countTwinPrimes();
 
 int main() {
-    countTwinPrimes();
+    int twinPrimCount = countTwinPrimes();
+
+    printf("There are %u twin primes between %u and %u\n", 
+        twinPrimCount, FIRST_PRIME, LIMIT);
 
     exit(0);
 }
 
-void countTwinPrimes() {
+int countTwinPrimes() {
     //  Allocate prime list
     u32 initialPrimes[INITIAL_PRIME_CAPACITY];
     initialPrimes[0] = FIRST_PRIME;
@@ -69,10 +72,12 @@ void countTwinPrimes() {
         ++current;
     }
 
+    /*
     printf(
         "To determine whether a number between %u and %u is prime, "\
         "up to %u prime numbers must be checked\n",
         FIRST_PRIME, LIMIT, primeList.size);
+    */
 
     current = FIRST_TWIN_PRIME;
     u32 previousPrime = current;
@@ -91,10 +96,8 @@ void countTwinPrimes() {
 
         ++current;
     }
-    
-    printf(
-        "There are %u twin primes between %u and %u\n", 
-        twinPrimeCount, FIRST_PRIME, LIMIT);
+
+    return twinPrimeCount;
 }
 
 u8 isPrime(u32 check, struct PrimeList primeList) {
