@@ -453,8 +453,6 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
 
-
-
   c->proc = 0;
 
   for (;;) {
@@ -489,10 +487,6 @@ scheduler(void)
         } else {
           if (lpProcess == 0) {
             lpProcess = p;
-          } else {
-            if (p->pid < lpProcess->pid) {
-              lpProcess = p;
-            }
           }
         }
       }
@@ -501,28 +495,46 @@ scheduler(void)
     }
 
     if (hpProcess != 0) {
-      p->state = RUNNING;
-      c->proc = p;
-      p->hpRunLength -= 1;
-      swtch(&c->context, &p->context);
+      acquire(&hpProcess->lock);
+
+      if (mode == 1) {
+        printf("Scheduling HP Process, PID: %u, Time solts remaining: %u\n", 
+          hpProcess->pid, hpProcess->hpRunLength);
+      }
+      hpProcess->state = RUNNING;
+      c->proc = hpProcess;
+      hpProcess->hpRunLength -= 1;
+      swtch(&c->context, &hpProcess->context);
 
       c->proc = 0;
       found = 1;
+      release(&hpProcess->lock);
     } else if (mpProcess != 0) {
-      p->state = RUNNING;
-      c->proc = p;
-      p->mpRunLength -= 1;
-      swtch(&c->context, &p->context);
+      acquire(&mpProcess->lock);
+      if (mode == 1) {
+        printf("Scheduling MP Process, PID: %u, Time solts remaining: %u\n", 
+          mpProcess->pid, mpProcess->mpRunLength);
+      }
+      mpProcess->state = RUNNING;
+      c->proc = mpProcess;
+      mpProcess->mpRunLength -= 1;
+      swtch(&c->context, &mpProcess->context);
 
       c->proc = 0;
       found = 1;
+      release(&mpProcess->lock);
     } else if (lpProcess != 0) {
-      p->state = RUNNING;
-      c->proc = p;
-      swtch(&c->context, &p->context);
+      acquire(&lpProcess->lock);
+      if (mode == 1) {
+        printf("Scheduling LP Process, PID: %u\n", lpProcess->pid);
+      }
+      lpProcess->state = RUNNING;
+      c->proc = lpProcess;
+      swtch(&c->context, &lpProcess->context);
 
       c->proc = 0;
       found = 1;
+      release(&lpProcess->lock);
     }
 
     if (found == 0) {
