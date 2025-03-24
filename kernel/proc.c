@@ -453,6 +453,8 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
 
+
+
   c->proc = 0;
 
   for (;;) {
@@ -460,39 +462,68 @@ scheduler(void)
 
     int found = 0;
 
+    struct proc *hpProcess = 0;
+    struct proc *mpProcess = 0;
+    struct proc *lpProcess = 0;
+
     for (p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
 
       if (p->state == RUNNABLE) {
         if (p->hpRunLength > 0) {
-          p->state = RUNNING;
-          c->proc = p;
-          p->hpRunLength -= 1;
-          swtch(&c->context, &p->context);
-
-          c->proc = 0;
-          found = 1;
+          if (hpProcess == 0) {
+            hpProcess = p;
+          } else {
+            if (p->pid < hpProcess->pid) {
+              hpProcess = p;
+            }
+          }
         } else if (p->mpRunLength > 0) {
-          p->state = RUNNING;
-          c->proc = p;
-          p->mpRunLength -= 1;
-          swtch(&c->context, &p->context);
-
-          c->proc = 0;
-          found = 1;
+          if (mpProcess == 0) {
+            mpProcess = p;
+          } else {
+            if (p->pid < mpProcess->pid) {
+              mpProcess = p;
+            }
+          }
         } else {
-          p->state = RUNNING;
-          c->proc = p;
-          swtch(&c->context, &p->context);
-
-          c->proc = 0;
-          found = 1;
+          if (lpProcess == 0) {
+            lpProcess = p;
+          } else {
+            if (p->pid < lpProcess->pid) {
+              lpProcess = p;
+            }
+          }
         }
       }
 
       release(&p->lock);
     }
 
+    if (hpProcess != 0) {
+      p->state = RUNNING;
+      c->proc = p;
+      p->hpRunLength -= 1;
+      swtch(&c->context, &p->context);
+
+      c->proc = 0;
+      found = 1;
+    } else if (mpProcess != 0) {
+      p->state = RUNNING;
+      c->proc = p;
+      p->mpRunLength -= 1;
+      swtch(&c->context, &p->context);
+
+      c->proc = 0;
+      found = 1;
+    } else if (lpProcess != 0) {
+      p->state = RUNNING;
+      c->proc = p;
+      swtch(&c->context, &p->context);
+
+      c->proc = 0;
+      found = 1;
+    }
 
     if (found == 0) {
       intr_on();
