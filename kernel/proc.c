@@ -302,6 +302,12 @@ fork(void)
   np->hpRunLength = 0;
   np->mpRunLength = 0;
 
+  if (mode) {
+    printf(
+      "Creating child process: hpRunLength = %u, mpRunLength = %u\n",
+      np->hpRunLength, np->mpRunLength);
+  }
+
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
 
@@ -450,133 +456,143 @@ wait(uint64 addr)
 void
 scheduler(void)
 {
-  struct proc *p;
-  struct cpu *c = mycpu();
 
-  c->proc = 0;
-
-  for (;;) {
-    intr_on();
-
-    int found = 0;
-
-    struct proc *hpProcess = 0;
-    struct proc *mpProcess = 0;
-    struct proc *lpProcess = 0;
-
-    for (p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-
-      if (p->state == RUNNABLE) {
-        if (p->hpRunLength > 0) {
-          if (hpProcess == 0) {
-            hpProcess = p;
-          } else {
-            if (p->pid < hpProcess->pid) {
-              hpProcess = p;
-            }
-          }
-        } else if (p->mpRunLength > 0) {
-          if (mpProcess == 0) {
-            mpProcess = p;
-          } else {
-            if (p->pid < mpProcess->pid) {
-              mpProcess = p;
-            }
-          }
-        } else {
-          if (lpProcess == 0) {
-            lpProcess = p;
-          }
-        }
-      }
-
-      release(&p->lock);
-    }
-
-    if (hpProcess != 0) {
-      acquire(&hpProcess->lock);
-
-      if (mode == 1) {
-        printf("Scheduling HP Process, PID: %u, Time solts remaining: %u\n", 
-          hpProcess->pid, hpProcess->hpRunLength);
-      }
-      hpProcess->state = RUNNING;
-      c->proc = hpProcess;
-      hpProcess->hpRunLength -= 1;
-      swtch(&c->context, &hpProcess->context);
-
-      c->proc = 0;
-      found = 1;
-      release(&hpProcess->lock);
-    } else if (mpProcess != 0) {
-      acquire(&mpProcess->lock);
-      if (mode == 1) {
-        printf("Scheduling MP Process, PID: %u, Time solts remaining: %u\n", 
-          mpProcess->pid, mpProcess->mpRunLength);
-      }
-      mpProcess->state = RUNNING;
-      c->proc = mpProcess;
-      mpProcess->mpRunLength -= 1;
-      swtch(&c->context, &mpProcess->context);
-
-      c->proc = 0;
-      found = 1;
-      release(&mpProcess->lock);
-    } else if (lpProcess != 0) {
-      acquire(&lpProcess->lock);
-      if (mode == 1) {
-        printf("Scheduling LP Process, PID: %u\n", lpProcess->pid);
-      }
-      lpProcess->state = RUNNING;
-      c->proc = lpProcess;
-      swtch(&c->context, &lpProcess->context);
-
-      c->proc = 0;
-      found = 1;
-      release(&lpProcess->lock);
-    }
-
-    if (found == 0) {
-      intr_on();
-      asm volatile("wfi");
-    }
-  }
+//  ****************************************************************************
+//  3LFQ Scheduler
+//  ****************************************************************************
 
   //struct proc *p;
   //struct cpu *c = mycpu();
 
   //c->proc = 0;
-  //for(;;){
-  //  // The most recent process to run may have had interrupts
-  //  // turned off; enable them to avoid a deadlock if all
-  //  // processes are waiting.
+
+  //for (;;) {
   //  intr_on();
 
   //  int found = 0;
-  //  for(p = proc; p < &proc[NPROC]; p++) {
-  //    acquire(&p->lock);
-  //    if(p->state == RUNNABLE) {
-  //      // Switch to chosen process.  It is the process's job
-  //      // to release its lock and then reacquire it
-  //      // before jumping back to us.
-  //      p->state = RUNNING;
-  //      c->proc = p;
-  //      swtch(&c->context, &p->context);
 
-  //      // Process is done running for now.
-  //      // It should have changed its p->state before coming back.
-  //      c->proc = 0;
-  //      found = 1;
+  //  struct proc *hpProcess = 0;
+  //  struct proc *mpProcess = 0;
+  //  struct proc *lpProcess = 0;
+
+  //  for (p = proc; p < &proc[NPROC]; p++) {
+  //    acquire(&p->lock);
+
+  //    if (p->state == RUNNABLE) {
+  //      if (p->hpRunLength > 0) {
+  //        if (hpProcess == 0) {
+  //          hpProcess = p;
+  //        } else {
+  //          if (p->pid < hpProcess->pid) {
+  //            hpProcess = p;
+  //          }
+  //        }
+  //      } else if (p->mpRunLength > 0) {
+  //        if (mpProcess == 0) {
+  //          mpProcess = p;
+  //        } else {
+  //          if (p->pid < mpProcess->pid) {
+  //            mpProcess = p;
+  //          }
+  //        }
+  //      } else {
+  //        if (lpProcess == 0) {
+  //          lpProcess = p;
+  //        }
+  //      }
   //    }
+
   //    release(&p->lock);
   //  }
-  //  if(found == 0) {
-  //    // nothing to run; stop running on this core until an interrupt.
+
+  //  if (hpProcess != 0) {
+  //    acquire(&hpProcess->lock);
+
+  //    if (mode) {
+  //      printf("Scheduling HP Process, PID: %u, Time solts remaining: %u\n", 
+  //        hpProcess->pid, hpProcess->hpRunLength);
+  //    }
+  //    hpProcess->state = RUNNING;
+  //    c->proc = hpProcess;
+  //    hpProcess->hpRunLength -= 1;
+  //    swtch(&c->context, &hpProcess->context);
+
+  //    c->proc = 0;
+  //    found = 1;
+  //    release(&hpProcess->lock);
+  //  } else if (mpProcess != 0) {
+  //    acquire(&mpProcess->lock);
+  //    if (mode) {
+  //      printf("Scheduling MP Process, PID: %u, Time solts remaining: %u\n", 
+  //        mpProcess->pid, mpProcess->mpRunLength);
+  //    }
+  //    mpProcess->state = RUNNING;
+  //    c->proc = mpProcess;
+  //    mpProcess->mpRunLength -= 1;
+  //    swtch(&c->context, &mpProcess->context);
+
+  //    c->proc = 0;
+  //    found = 1;
+  //    release(&mpProcess->lock);
+  //  } else if (lpProcess != 0) {
+  //    acquire(&lpProcess->lock);
+  //    if (mode) {
+  //      printf("Scheduling LP Process, PID: %u\n", lpProcess->pid);
+  //    }
+  //    lpProcess->state = RUNNING;
+  //    c->proc = lpProcess;
+  //    swtch(&c->context, &lpProcess->context);
+
+  //    c->proc = 0;
+  //    found = 1;
+  //    release(&lpProcess->lock);
+  //  }
+
+  //  if (found == 0) {
   //    intr_on();
   //    asm volatile("wfi");
   //  }
   //}
+
+
+//  ****************************************************************************
+//  Round Robin Scheduler
+//  ****************************************************************************
+
+  struct proc *p;
+  struct cpu *c = mycpu();
+
+  c->proc = 0;
+  for(;;){
+    // The most recent process to run may have had interrupts
+    // turned off; enable them to avoid a deadlock if all
+    // processes are waiting.
+    intr_on();
+
+    int found = 0;
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state == RUNNABLE) {
+        // Switch to chosen process.  It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
+        p->state = RUNNING;
+        c->proc = p;
+        swtch(&c->context, &p->context);
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+        found = 1;
+      }
+      release(&p->lock);
+    }
+    if(found == 0) {
+      // nothing to run; stop running on this core until an interrupt.
+      intr_on();
+      asm volatile("wfi");
+    }
+  }
 }
 
 // Switch to scheduler.  Must hold only p->lock

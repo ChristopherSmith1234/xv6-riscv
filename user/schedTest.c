@@ -6,6 +6,7 @@ const int MAX_PROCESS = 8;
 
 int main() {
     updateScheduler();
+    sys_debug(1);
 
     int index = 0;
     int pid;
@@ -39,6 +40,7 @@ int main() {
     }
 
     updateScheduler();
+    sys_debug(0);
 
     exit(0);
 }
