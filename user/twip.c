@@ -103,6 +103,9 @@ int countTwinPrimes() {
 u8 isPrime(u32 check, struct PrimeList primeList) {
     u32 index = 0;
     
+    //  Search through primes; return is prime if `check` is equal to 
+    //  or is not divisible by a prime in `primeList`. Else, return is not 
+    //  prime
     while (index < primeList.size) {
         u32 currentPrime = primeList.primes[index];
 

@@ -302,6 +302,11 @@ fork(void)
   np->hpRunLength = 0;
   np->mpRunLength = 0;
 
+  if (mode) {
+    printf("Creating a child process: hpRunLength = %u, mpRunLength = %u\n",
+      np->hpRunLength, np->mpRunLength);
+  }
+
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
 
@@ -455,10 +460,59 @@ scheduler(void)
 
   c->proc = 0;
 
+  struct proc *activeHpProcess = 0;
+  struct proc *activeMpProcess = 0;
+
   for (;;) {
     intr_on();
 
     int found = 0;
+
+    if (activeHpProcess != 0) {
+      acquire(&activeHpProcess->lock);
+
+      if (activeHpProcess->hpRunLength > 0) {
+
+        if (mode) {
+          printf("Scheduling HP Process, PID: %u, Time solts remaining: %u\n", 
+            activeHpProcess->pid, activeHpProcess->hpRunLength);
+        }
+        activeHpProcess->state = RUNNING;
+        c->proc = activeHpProcess;
+        activeHpProcess->hpRunLength -= 1;
+        swtch(&c->context, &activeHpProcess->context);
+
+        c->proc = 0;
+        found = 1;
+      } else {
+        activeHpProcess = 0;
+        found = 0;
+      }
+
+      release(&activeHpProcess->lock);
+    } else if (activeMpProcess != 0) {
+      acquire(&activeMpProcess->lock);
+
+      if (activeMpProcess->mpRunLength > 0) {
+
+        if (mode) {
+          printf("Scheduling MP Process, PID: %u, Time solts remaining: %u\n", 
+            activeMpProcess->pid, activeMpProcess->mpRunLength);
+        }
+        activeMpProcess->state = RUNNING;
+        c->proc = activeMpProcess;
+        activeMpProcess->mpRunLength -= 1;
+        swtch(&c->context, &activeMpProcess->context);
+
+        c->proc = 0;
+        found = 1;
+      } else {
+        activeMpProcess = 0;
+        found = 0;
+      }
+
+      release(&activeMpProcess->lock);
+    } else {
 
     struct proc *hpProcess = 0;
     struct proc *mpProcess = 0;
@@ -495,9 +549,12 @@ scheduler(void)
     }
 
     if (hpProcess != 0) {
+      if (activeHpProcess == 0) {
+        activeHpProcess = hpProcess;
+      }
       acquire(&hpProcess->lock);
 
-      if (mode == 1) {
+      if (mode) {
         printf("Scheduling HP Process, PID: %u, Time solts remaining: %u\n", 
           hpProcess->pid, hpProcess->hpRunLength);
       }
@@ -510,8 +567,11 @@ scheduler(void)
       found = 1;
       release(&hpProcess->lock);
     } else if (mpProcess != 0) {
+      if (activeMpProcess == 0) {
+        activeMpProcess = mpProcess;
+      }
       acquire(&mpProcess->lock);
-      if (mode == 1) {
+      if (mode) {
         printf("Scheduling MP Process, PID: %u, Time solts remaining: %u\n", 
           mpProcess->pid, mpProcess->mpRunLength);
       }
@@ -525,7 +585,7 @@ scheduler(void)
       release(&mpProcess->lock);
     } else if (lpProcess != 0) {
       acquire(&lpProcess->lock);
-      if (mode == 1) {
+      if (mode) {
         printf("Scheduling LP Process, PID: %u\n", lpProcess->pid);
       }
       lpProcess->state = RUNNING;
@@ -536,6 +596,9 @@ scheduler(void)
       found = 1;
       release(&lpProcess->lock);
     }
+
+    }
+
 
     if (found == 0) {
       intr_on();
