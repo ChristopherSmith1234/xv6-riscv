@@ -67,25 +67,27 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if (r_scause() == 15) { // Page fault
-    uint64 fault_addr = r_stval(); // Faulting virtual address
-    if(fault_addr == 0) {
-    printf("usertrap: null pointer dereference at address 0x0, pid=%d\n",
-    myproc()->pid);
-    myproc()->killed = 1; // Mark the process for termination
-    } else {
-    printf("usertrap: page fault at address %ld, pid=%dl\n",
-    fault_addr, myproc()->pid);
-    myproc()->killed = 1;
-    }
-  }
-  else if((which_dev = devintr()) != 0){
+  }   else if((which_dev = devintr()) != 0){
     // ok
   } else {
     printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
     printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
     setkilled(p);
   }
+
+  if (r_scause() == 15) { // Page fault
+    uint64 fault_addr = r_stval(); // Faulting virtual address
+    if(fault_addr == 0) {
+      printf("usertrap: null pointer dereference at address 0x0, pid=%d\n",
+        myproc()->pid);
+      myproc()->killed = 1; // Mark the process for termination
+    } else {
+      printf("usertrap: page fault at address %ld, pid=%dl\n",
+        fault_addr, myproc()->pid);
+      myproc()->killed = 1;
+    }
+  }
+
 
 
   if(killed(p))
