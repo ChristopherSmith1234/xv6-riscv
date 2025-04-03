@@ -49,9 +49,11 @@ usertrap(void)
   
   // save user program counter.
   p->trapframe->epc = r_sepc();
+
   
   if(r_scause() == 8){
     // system call
+
 
     if(killed(p))
       exit(-1);
@@ -65,13 +67,26 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+  } else if (r_scause() == 15) { // Page fault
+    uint64 fault_addr = r_stval(); // Faulting virtual address
+    if(fault_addr == 0) {
+    printf("usertrap: null pointer dereference at address 0x0, pid=%d\n",
+    myproc()->pid);
+    myproc()->killed = 1; // Mark the process for termination
+    } else {
+    printf("usertrap: page fault at address %ld, pid=%dl\n",
+    fault_addr, myproc()->pid);
+    myproc()->killed = 1;
+    }
+  }
+  else if((which_dev = devintr()) != 0){
     // ok
   } else {
     printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
     printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
     setkilled(p);
   }
+
 
   if(killed(p))
     exit(-1);
@@ -138,6 +153,7 @@ kerneltrap()
   uint64 sepc = r_sepc();
   uint64 sstatus = r_sstatus();
   uint64 scause = r_scause();
+
   
   if((sstatus & SSTATUS_SPP) == 0)
     panic("kerneltrap: not from supervisor mode");

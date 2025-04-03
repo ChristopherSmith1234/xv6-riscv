@@ -144,6 +144,7 @@ UPROGS=\
 	$U/_ps\
 	$U/_twip\
 	$U/_schedTest\
+	$U/_nullptr\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
